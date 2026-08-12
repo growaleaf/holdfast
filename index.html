@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Holdfast — a life on one rock</title>
+<meta name="description" content="You are a barnacle. You will never move. Hold your shell open to feed, close it to be safe. Everything else is timing.">
+<meta property="og:title" content="Holdfast">
+<meta property="og:description" content="You are a barnacle. You will never move. Open to feed, close to be safe.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<!-- slop-lint: allow SLOP004 — required by neverdone30 fleet MASTER_BRIEF.md line 19: "emoji favicon via data-SVG" is the specified build shape for every game in this fleet -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%AA%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --slate-0:#0b171b;
+    --slate-1:#102329;
+    --slate-2:#173038;
+    --teal-0:#2c6e6b;
+    --teal-1:#5fc9bd;
+    --teal-2:#a7ece0;
+    --sand:#e7c88a;
+    --sand-dim:#b99a5f;
+    --ink:#eaf6f3;
+    --ink-dim:#9fc3bd;
+    --danger:#e2765f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--slate-0);
+    color:var(--ink);
+    font-family:Georgia,'Times New Roman',serif;
+    display:flex;
+    justify-content:center;
+    overscroll-behavior:none;
+  }
+  #app{
+    width:100%;
+    max-width:480px;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    background:linear-gradient(180deg,var(--slate-1),var(--slate-0));
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow:hidden;
+    user-select:none;
+  }
+  .screen{
+    flex:1;
+    display:none;
+    flex-direction:column;
+    padding:28px 24px;
+    min-height:0;
+  }
+  .screen.active{display:flex;}
+
+  .center{align-items:center;justify-content:center;text-align:center;gap:18px;}
+
+  h1{
+    font-size:2.1rem;
+    letter-spacing:0.02em;
+    margin:0;
+    color:var(--teal-2);
+  }
+  p{line-height:1.5;color:var(--ink-dim);margin:0;}
+  .tag{color:var(--ink-dim);font-style:italic;max-width:32ch;}
+
+  button{
+    font-family:inherit;
+    font-size:1.05rem;
+    border-radius:999px;
+    border:1px solid var(--teal-0);
+    background:var(--teal-0);
+    color:var(--ink);
+    padding:14px 28px;
+    cursor:pointer;
+  }
+  button.ghost{
+    background:transparent;
+    color:var(--teal-2);
+  }
+  button:active{transform:scale(0.97);}
+
+  .stack{display:flex;flex-direction:column;gap:12px;width:100%;max-width:280px;}
+
+  /* --- how-to --- */
+  .howto-list{
+    text-align:left;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin:8px 0 20px;
+  }
+  .howto-list .row{display:flex;gap:12px;align-items:flex-start;}
+  .howto-list .mark{width:28px;flex:none;text-align:center;color:var(--teal-1);font-weight:bold;font-size:1.1rem;}
+  .howto-list .txt{color:var(--ink);line-height:1.4;}
+  .howto-list .txt b{color:var(--teal-2);}
+
+  /* --- play screen --- */
+  #screen-play{padding:0;position:relative;}
+  #hud{
+    position:absolute;
+    top:0;left:0;right:0;
+    padding:calc(env(safe-area-inset-top) + 14px) 18px 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    z-index:3;
+    pointer-events:none;
+  }
+  #hud .rings-count{font-size:1.15rem;color:var(--sand);}
+  #hud .rings-count small{display:block;color:var(--ink-dim);font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;}
+  #hud .storms-count{font-size:1.15rem;color:var(--teal-2);text-align:right;}
+  #hud .storms-count small{display:block;color:var(--ink-dim);font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;}
+
+  #hint{
+    position:absolute;
+    bottom:calc(env(safe-area-inset-bottom) + 18px);
+    left:0;right:0;
+    text-align:center;
+    z-index:3;
+    color:var(--ink-dim);
+    font-size:0.85rem;
+    letter-spacing:0.03em;
+    pointer-events:none;
+    transition:opacity 0.6s ease;
+  }
+  #stage{
+    flex:1;
+    position:relative;
+    touch-action:none;
+    cursor:pointer;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+  }
+  #open-flag{
+    position:absolute;
+    top:calc(env(safe-area-inset-top) + 14px);
+    left:50%;
+    transform:translateX(-50%);
+    z-index:3;
+    font-size:0.78rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--teal-2);
+    opacity:0;
+    transition:opacity 0.25s ease;
+    pointer-events:none;
+  }
+  #open-flag.show{opacity:1;}
+
+  /* --- end / memorial screen --- */
+  #screen-end .epitaph{color:var(--ink);font-size:1.1rem;max-width:30ch;}
+  #screen-end .tally{
+    display:flex;
+    gap:28px;
+    margin:6px 0 4px;
+  }
+  #screen-end .tally div{text-align:center;}
+  #screen-end .tally .n{font-size:2rem;color:var(--sand);display:block;}
+  #screen-end .tally .l{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-dim);}
+  #legacy-line{font-size:0.85rem;color:var(--ink-dim);max-width:34ch;}
+  #share-text{
+    font-family:inherit;
+    font-size:0.85rem;
+    color:var(--teal-2);
+    background:var(--slate-2);
+    border:1px solid var(--teal-0);
+    border-radius:10px;
+    padding:10px 14px;
+    max-width:320px;
+    word-break:break-word;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-title" class="screen active center">
+    <h1>Holdfast</h1>
+    <p class="tag">You are a barnacle on a rock. You will never move again. Open your shell, or keep it closed. That is the whole of it.</p>
+    <div id="rock-memory" class="tag" style="display:none;"></div>
+    <div class="stack">
+      <button id="btn-play">Settle In</button>
+      <button id="btn-howto" class="ghost">How It Works</button>
+    </div>
+  </section>
+
+  <section id="screen-howto" class="screen">
+    <h1 style="font-size:1.5rem;margin-bottom:6px;">How It Works</h1>
+    <div class="howto-list">
+      <div class="row"><span class="mark">HOLD</span><span class="txt"><b>Hold to open.</b> While the water covers you and your shell is open, you feed and grow a ring.</span></div>
+      <div class="row"><span class="mark">LET GO</span><span class="txt"><b>Release to close.</b> Closed, nothing can reach you. You feed nothing, but you are always safe.</span></div>
+      <div class="row"><span class="mark">GULL</span><span class="txt">A shadow crosses before it stabs. If you're open when it lands, you lose a little food.</span></div>
+      <div class="row"><span class="mark">CRAB</span><span class="txt">A ripple gives away a crab before it pinches. Open costs you more food than a gull.</span></div>
+      <div class="row"><span class="mark">WAVE</span><span class="txt">A shadow rises from the water before a wave slams the rock. Open when it lands, and it takes you. Closed, it never can.</span></div>
+      <div class="row"><span class="mark">RINGS</span><span class="txt">Every warning comes early. Watching is the whole game — your rings are the only record that you did.</span></div>
+    </div>
+    <div class="stack">
+      <button id="btn-howto-play">Settle In</button>
+      <button id="btn-howto-back" class="ghost">Back</button>
+    </div>
+  </section>
+
+  <section id="screen-play" class="screen">
+    <div id="hud">
+      <div class="rings-count"><small>rings</small><span id="hud-rings">0</span></div>
+      <div class="storms-count"><small>storms outlived</small><span id="hud-storms">0</span></div>
+    </div>
+    <div id="open-flag">open</div>
+    <div id="stage">
+      <canvas id="c"></canvas>
+    </div>
+    <div id="hint">hold anywhere to open your shell</div>
+  </section>
+
+  <section id="screen-end" class="screen center">
+    <div class="epitaph" id="end-epitaph">A wave found you open.</div>
+    <div class="tally">
+      <div><span class="n" id="end-rings">0</span><span class="l">rings</span></div>
+      <div><span class="n" id="end-storms">0</span><span class="l">storms outlived</span></div>
+    </div>
+    <div id="legacy-line"></div>
+    <div id="share-text"></div>
+    <div class="stack">
+      <button id="btn-copy" class="ghost">Copy Share Line</button>
+      <button id="btn-restart">A New Spat Settles Here</button>
+    </div>
+  </section>
+
+</div>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
